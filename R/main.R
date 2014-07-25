@@ -4,11 +4,6 @@ require(kiwi)
 
 
 
-asGitPath <- path := {
-	file.path(args $ `<path>`, path)
-}
-
-
 
 
 
@@ -24,10 +19,16 @@ git <- ( function () {
 		as.POSIXct(as.numeric(time), tz, origin = "1970-01-01")
 	}
 
+	self $ abspath <- repoPath := {
+		fpath := {
+			file.path(repoPath, fpath)
+		}
+	}
+
 	self $ ls_files <- dpath := {
 
 		x_(exec('cd', dpath, '&&', 'git ls-files')) $
-		xMap(asGitPath)                             $
+		xMap(self $ abspath(dpath))                 $
 		x_Reject(
 			xIsMatch('jpg$|png$|jpeg$'))
 
@@ -57,7 +58,8 @@ git <- ( function () {
 
 main <- function (args) {
 
-	print('asdasdasdasdasd')
+	repoPath  <- args $ `<path>`
+	repoFiles <- git $ ls_files(repoPath)
 
-	fpath <- args $ `<path>`
+	print(repoFiles)
 }
