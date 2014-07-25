@@ -1,0 +1,11 @@
+Package: freshness
+Type: Package
+Title: freshness
+Description:
+Version: 0.1.0
+Depends:
+	R (>= 2.14.0)
+License: MIT
+Collate:
+	'main.R'
+	'freshness.R'
