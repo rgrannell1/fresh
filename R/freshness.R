@@ -76,7 +76,7 @@ git <- ( function () {
 		 			xIsMatch('^author-time|^author-tz') )    $
 		 		xMap(xToWords %then% xSecondOf)              $
 		 		xChunk(2)                                    $
-		 		x_Map(xApply(toPosix))
+		 		x_Map(xApply(toPosix) %then% as.numeric)
 
 		 	lineDates
 		}
@@ -97,11 +97,23 @@ main <- function (args) {
 
 	lineDates_ <- repoFiles_ $ xMap(git $ blame(repoPath))
 
-	bounds     <- list(
-		lower = lineDates_ $ xFlatten(1) $ xMinBy(as.numeric),
-		upper = lineDates_ $ xFlatten(1) $ xMaxBy(as.numeric))
+	# -- get the date bounds.
+	dateBounds <- list(
+		lower = lineDates_ $ xFlatten(1) $ x_MinBy(xI),
+		upper = lineDates_ $ xFlatten(1) $ x_MaxBy(xI))
 
-	print(bounds)
+	dateBounds $ diff <- dateBounds $ upper - dateBounds $ lower
+
+	# -- convert dates to percentage of the interval
+	# -- between oldest and newest.
+	normalised_ <-
+		lineDates_ $
+		xMap(
+			xMap(x. - dateBounds $ lower)) $
+		x_Map(
+			xMap(x. / dateBounds $ diff))
+
+	print(normalised_)
 
 }
 
