@@ -26,4 +26,4 @@ if ( xNot(xVersion(), c(0, 38, 0)) ) {
 	warning("not written for use with Kiwi > 0.38.0")
 }
 
-main(args)
+freshness ::: main(args)
