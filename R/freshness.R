@@ -110,10 +110,22 @@ main <- function (args) {
 		lineDates_ $
 		xMap(
 			xMap(x. - dateBounds $ lower)) $
-		x_Map(
+		xMap(
 			xMap(x. / dateBounds $ diff))
 
-	print(normalised_)
+	fileStats <-
+		normalised_                                   $
+		xMap(xAsDouble)                               $
+		xMap(
+			xJuxtapose_(median, sd))                  $
+		xZip_(
+			repoFiles_ $ x_Identity())                $
+		xFlatten(2)                                   $
+		xMap(
+			xAddKeys(c('median', 'sd', 'filename')) )
+
+
+	print(fileStats)
 
 }
 
