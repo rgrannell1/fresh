@@ -26,4 +26,86 @@ if ( xNot(xVersion(), c(0, 38, 0)) ) {
 	warning("not written for use with Kiwi > 0.38.0")
 }
 
-freshness ::: main(args)
+
+
+
+
+
+
+
+
+
+
+git <- ( function () {
+
+	self <- list()
+
+	exec <- function (...) {
+		system(paste(...), intern = True)
+	}
+
+	toPosix <- function (time, tz) {
+		as.POSIXct(as.numeric(time), tz, origin = "1970-01-01")
+	}
+
+	self $ abspath <- repoPath := {
+		fpath := {
+			file.path(repoPath, fpath)
+		}
+	}
+
+	self $ ls_files <- dpath := {
+
+		x_(exec('cd', dpath, '&&', 'git ls-files')) $
+		xMap(self $ abspath(dpath))                 $
+		x_Reject(
+			xIsMatch('jpg$|png$|jpeg$'))
+
+	}
+
+	self $ blame <- dpath := {
+		fpath := {
+
+			# -- get the posix times for each line in a file.
+
+		 	lineDates <-
+		 		x_(exec(
+		 			'cd', dpath, '&&',
+		 			'git blame', fpath, '--line-porcelain')) $
+		 		xSelect(
+		 			xIsMatch('^author-time|^author-tz') )    $
+		 		xMap(xToWords %then% xSecondOf)              $
+		 		xChunk(2)                                    $
+		 		x_Map(xApply(toPosix))
+
+		 	lineDates
+		}
+	}
+
+	self
+
+} )()
+
+
+
+
+
+main <- function (args) {
+
+	repoPath   <- args $ `<path>`
+	repoFiles_ <- x_(git  $ ls_files(repoPath))
+
+	lineDates_ <- repoFiles_ $ xMap(git $ blame(repoPath))
+
+	bounds     <- list(
+		lower = lineDates_ $ xFlatten(1) $ xMinBy(as.numeric),
+		upper = lineDates_ $ xFlatten(1) $ xMaxBy(as.numeric))
+
+	print(bounds)
+
+}
+
+
+
+
+main(args)
