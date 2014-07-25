@@ -106,6 +106,7 @@ main <- function (args) {
 
 	# -- convert dates to percentage of the interval
 	# -- between oldest and newest.
+
 	normalised_ <-
 		lineDates_ $
 		xMap(
@@ -113,17 +114,26 @@ main <- function (args) {
 		xMap(
 			xMap(x. / dateBounds $ diff))
 
+	# -- get the median and standard deviation of the dates
+	# -- within each file.
+
 	fileStats <-
 		normalised_                                   $
 		xMap(xAsDouble)                               $
 		xMap(
 			xJuxtapose_(median, sd))                  $
+
 		xZip_(
 			repoFiles_ $ x_Identity())                $
+
 		xFlatten(2)                                   $
 		xMap(
+			xJuxtapose_(
+				xFirstOf  %then% as.numeric,
+				xSecondOf %then% as.numeric,
+				xThirdOf))                            $
+		xMap(
 			xAddKeys(c('median', 'sd', 'filename')) )
-
 
 	print(fileStats)
 
