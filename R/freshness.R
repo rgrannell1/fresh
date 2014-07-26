@@ -1,14 +1,14 @@
 #!/usr/bin/env Rscript
 
-require(kiwi)
-require(git2r)
-require(docopt)
-require(methods)
+require(kiwi,    quietly = TRUE, warn.conflicts = FALSE)
+require(git2r,   quietly = TRUE, warn.conflicts = FALSE)
+require(docopt,  quietly = TRUE, warn.conflicts = FALSE)
+require(methods, quietly = TRUE, warn.conflicts = FALSE)
 
 "
 Usage:
-    fresh <path> [-g|--github] [--silent] [report (--simple | --full | --program)]
-    fresh <path> <pattern>     [--github] [--silent] [report (--simple | --full | --program)]
+    fresh <path> [-g|--github] [--verbose] [report (--simple | --full | --program)]
+    fresh <path> <pattern>     [--github] [--verbose] [report (--simple | --full | --program)]
     fresh (-h | --help | --version)
 
 Description:   Fresh is a command-line tool for gathering statistics on the age
@@ -24,7 +24,7 @@ Options:
 	--github    Should the path be treated as a github repository url
 	            of the form 'username/reponame'?
 	--version   Show the current version number.
-	--silent    Should fresh suppress all messages aside from the final result?
+	--verbose   Should fresh show messages aside from the final result?
 " -> doc
 
 
@@ -42,59 +42,6 @@ if ( xNot(xVersion(), c(0L, 37L, 0L)) ) {
 
 
 
-
-
-colourise <- local({
-	# functions that add ANSI colour codes to strings, allowing them to
-	# be colourised.
-
-	# partly adapted from Hadley Wickham's colourising code in testthat.
-	supports_colour <- function () {
-		# is a terminal colourisable?
-
-		env_vars <- Sys.getenv()
-
-		TERM      <- env_vars["TERM"]
-		COLORTERM <- env_vars["COLORTERM"]
-
-		set_env_vars <- names(env_vars)
-
-		# -- term support color.
-		matching_TERM <-
-			("TERM" %in% set_env_vars) && !is_na(TERM) && TERM %in%
-			c("screen", "screen-256color", "xterm-color", "xterm-256color")
-
-		# -- colorterm is set at all. This is required for gnome-terminal.
-		matching_COLORTERM <-
-			("COLORTERM" %in% set_env_vars) && !is_na(COLORTERM)
-
-		isTRUE(matching_TERM || matching_COLORTERM)
-
-	}
-
-	colouriser <- function (code) {
-		function (message) {
-			if (supports_colour()) {
-				"\033[" %+% code %+% message %+% "\033[0m"
-			} else {
-				message
-			}
-		}
-	}
-
-	list(
-		black =
-			colouriser("0;30m"),
-		blue =
-			colouriser("0;34m"),
-		green =
-			colouriser("0;32m"),
-		red =
-			colouriser("0;31m"),
-		yellow =
-			colouriser("1;33m")
-	)
-})
 
 
 
@@ -176,11 +123,11 @@ git <- ( function () {
 	# Clone a repository from github into a temporary location.
 	# Uses git2R for now; will re-implement with base R.
 
-	self $ clone <- (userrepo : isSilent) := {
+	self $ clone <- (userrepo : isVerbose) := {
 
 		location <- self $ tmppath
 		dir.create(location)
-		clone(paste0('https://github.com/', userrepo, '.git'), location, !isSilent)
+		clone(paste0('https://github.com/', userrepo, '.git'), location, isVerbose)
 		cat('\n')
 		location
 	}
@@ -198,7 +145,7 @@ git <- ( function () {
 getRepoPath <- args := {
 
 	if (args $ `--github`) {
-		git $ clone(args $ `<path>`, args $ `--silent`)
+		git $ clone(args $ `<path>`, args $ `--verbose`)
 		git $ tmppath
 	} else {
 		args $ `<path>`
@@ -281,14 +228,6 @@ getFileStats <- (repoFiles : percents) := {
 		(xFirstOf %then% xIsNa) %or% (xSecondOf %then% xIsNa)) $
 	xMap(
 		xAddKeys(c('median', 'sd', 'filename')) )              $
-	xMap(row := {
-		# -- remove temporary path from filename.
-
-		row $ filename <-
-			gsub(git $ tmppath, '.', row $ filename, fixed = TRUE)
-		row
-
-	})                                                          $
 	x_SortBy(x. $ median)
 
 }
@@ -330,14 +269,16 @@ showSummary <- (fileStats : projectStats : reporter) := {
 			x_(fileStats) $
 			xMap( xUnspread((median : sd : filename) := {
 
+				filename <- gsub(git $ tmppath, '.', row $ filename, fixed = TRUE)
+
 				paste(
 					gettextf(
 						paste0('%-', width, 's'), filename), '|',
-					format(
-						round(median, 2), nsmall = 2),
+					kiwi ::: colourise $ blue(format(
+						round(median, 2), nsmall = 2)),
 					'+-',
-					format(
-						round(sd, 2),     nsmall = 2) )
+					kiwi ::: colourise $ blue(format(
+						round(sd, 2),     nsmall = 2)) )
 
 			}) )          $
 			x_FromLines()
@@ -349,6 +290,22 @@ showSummary <- (fileStats : projectStats : reporter) := {
 
 	}
 	if (reporter == '--program') {
+
+		msg <-
+			x_(fileStats)                 $
+			xMap(row := {
+
+				row $ filename <-
+					gsub(git $ tmppath, '.', row $ filename, fixed = TRUE)
+				row
+
+			})                            $
+			xFlatten(1)                   $
+			xChunk(3)                     $
+			xMap(paste %then% xFromLines) $
+			x_Implode('\n\n')
+
+		message(msg)
 
 	}
 
@@ -378,7 +335,8 @@ getReporter <- function (args) {
 	if (args $ report) {
 
 		x__('--simple', '--full', '--program') $
-		xSelect(flag := args $ flag)           $
+		xSelect(
+			flag := xIsTrue( args [[flag]] ))  $
 		x_AsCharacter()
 
 	} else {
@@ -399,14 +357,23 @@ main <- function (args) {
 	repoPath   <- getRepoPath(args)
 	repoFiles  <- getRepoFiles(repoPath, args)
 
-	if (!args $ `--silent`) {
-		message('getting dates for each line: this might take a while...')
+	if (args $ `--verbose`) {
+		message('getting dates for each line (slow)')
 	}
 
 	linePosix  <- x_(repoFiles) $ xMap(git $ blame(repoPath))
 	normalised <- normalisePosix(linePosix)
 
+	if (args $ `--verbose`) {
+		message('summarising each file')
+	}
+
 	fileStats    <- getFileStats(repoFiles, normalised)
+
+	if (args $ `--verbose`) {
+		message('summarising the project')
+	}
+
 	projectStats <- getProjectStats(normalised)
 
 	showSummary(fileStats, projectStats, reporter)
