@@ -271,9 +271,7 @@ showSummary <- (fileStats : projectStats : reporter) := {
 			x_(fileStats) $
 			xMap( xUnspread((median : sd : filename) := {
 
-				print('asd')
-
-				filename <- gsub(git $ tmppath, '.', row $ filename, fixed = TRUE)
+				filename <- gsub(git $ tmppath, '.', filename, fixed = TRUE)
 
 				paste(
 					gettextf(
