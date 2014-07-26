@@ -1,12 +1,13 @@
 #!/usr/bin/env Rscript
 
 require(kiwi)
+require(git2r)
 require(docopt)
 require(methods)
 
 "
 Usage:
-    fresh <path>
+    fresh <path> [-g|--github]
     fresh (-h | --help | --version)
 
 Description: Fresh calculates
@@ -16,6 +17,8 @@ Arguments:
     <path>     The path to the github repository.
 
 Options:
+	--github   Should the path be treated as a github repository url
+	           of the form 'username/reponame'?
 	--version  Show the current version number.
 
 " -> doc
@@ -34,7 +37,9 @@ if ( xNot(xVersion(), c(0, 38, 0)) ) {
 
 
 
-
+tempPath <- function (args) {
+	tempfile(pattern = "fresh-")
+}
 
 git <- ( function () {
 
@@ -82,6 +87,13 @@ git <- ( function () {
 		}
 	}
 
+	self $ clone <- userrepo := {
+
+		location <- tempPath()
+		clone(paste0('https://github.com/', userrepo, '.git'), location)
+		location
+	}
+
 	self
 
 } )()
@@ -92,8 +104,16 @@ git <- ( function () {
 
 main <- function (args) {
 
-	repoPath   <- args $ `<path>`
-	repoFiles_ <- x_(git  $ ls_files(repoPath))
+	repoPath <- if (args $ `--github`) {
+		git $ clone(args $ `<path>`)
+		tempPath()
+	} else {
+		args $ `<path>`
+	}
+
+	print(list.files(repoPath))
+
+	repoFiles_ <- x_(git $ ls_files(repoPath))
 
 	lineDates_ <- repoFiles_ $ xMap(git $ blame(repoPath))
 
@@ -118,18 +138,18 @@ main <- function (args) {
 	# -- within each file.
 
 	fileStats <-
-		normalised_                                   $
-		xMap(xAsDouble)                               $
+		normalised_                          $
+		xMap(xAsDouble)                      $
 		xMap(
-			xJuxtapose_(median, sd))                  $
+			xJuxtapose_(median, sd))         $
 		xZip_(
-			repoFiles_ $ x_Identity())                $
-		xFlatten(2)                                   $
+			repoFiles_ $ x_Identity())       $
+		xFlatten(2)                          $
 		xMap(
 			xJuxtapose_(
 				xFirstOf  %then% as.numeric,
 				xSecondOf %then% as.numeric,
-				xThirdOf))                            $
+				xThirdOf))                   $
 		xMap(
 			xAddKeys(c('median', 'sd', 'filename')) )
 
