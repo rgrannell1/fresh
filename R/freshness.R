@@ -7,24 +7,28 @@ require(methods)
 
 "
 Usage:
-    fresh <path> [-g|--github] [-s|--silent]
-    fresh <path> <pattern>     [-g|--github] [-s|--silent]
+    fresh <path> [-g|--github] [--silent] [--no-color|--no-colour]
+    fresh <path> <pattern>     [--github] [--silent] [--no-color|--no-colour]
     fresh (-h | --help | --version)
 
 Description:   Fresh is a command-line tool for gathering statistics on the age
                of a git code-base.
 
 Arguments:
-    <path>     The path to the github repository. May be a relative path,
-               absolute path, or github path in the form username/reponame.
-    <pattern>  An extended regular expression to determine which
-               files should be summarised. Tested against the absolute
-               path for each file.
+    <path>      The path to the github repository. May be a relative path,
+                absolute path, or github path in the form username/reponame.
+    <pattern>   An extended regular expression to determine which
+                files should be summarised. Tested against the absolute
+                path for each file.
 Options:
-	--github   Should the path be treated as a github repository url
-	           of the form 'username/reponame'?
-	--version  Show the current version number.
-	--silent   Should fresh suppress all messages aside from the final result?
+	--github    Should the path be treated as a github repository url
+	            of the form 'username/reponame'?
+	--version   Show the current version number.
+	--silent    Should fresh suppress all messages aside from the final result?
+	--no-color  Disable colour in output. Required in older terminals.
+	            Fresh attempts to disable colours when they are not supported.
+	--no-colour Disable colour in output. Required in older terminals.
+	            Fresh attempts to disable colours when they are not supported.
 " -> doc
 
 
@@ -204,44 +208,45 @@ normalisePosix <- times := {
 
 # getFileStats
 #
-#
+# Get the median age (0 = oldest line in library, 1 = newest line in library)
+# of each line within a file, categorise by file, and sorted.
+# Remove empty files.
 
 getFileStats <- (repoFiles : percents) := {
 
-	x_(percents)                                  $
-	xMap(xAsDouble)                               $
+	x_(percents)                                               $
+	xMap(xAsDouble)                                            $
 	xMap(
-		xJuxtapose_(median, sd))                  $
+		xJuxtapose_(median, sd))                               $
 	xZip_(
-		repoFiles)                                $
-	xFlatten(2)                                   $
+		repoFiles)                                             $
+	xFlatten(2)                                                $
 	xMap(
 		xJuxtapose_(
 			xFirstOf  %then% as.numeric,
 			xSecondOf %then% as.numeric,
-			xThirdOf))                            $
+			xThirdOf))                                         $
+	xReject(
+		(xFirstOf %then% xIsNa) %or% (xSecondOf %then% xIsNa)) $
 	xMap(
-		xAddKeys(c('median', 'sd', 'filename')) ) $
-	xSortBy(function (x) {
+		xAddKeys(c('median', 'sd', 'filename')) )              $
+	xMap(row := {
+		# -- remove temporary path from filename.
 
-		val = x $ median
+		row $ filename <-
+			gsub(git $ tmppath, '.', row $ filename, fixed = TRUE)
+		row
 
-		if (!is.numeric(val) || xIsNa(val) || xIsNan(val)) {
-			print(val)
-			print(x)
-		}
-
-		val
-	})
+	})                                                          $
+	x_SortBy(x. $ median)
 
 }
 
 
-
 # getProjectStats
 #
-#
-#
+# Get the overall age and variance in age of lines within a
+# library.
 
 getProjectStats <- percents := {
 
@@ -258,8 +263,7 @@ getProjectStats <- percents := {
 
 # showSummary
 #
-#
-#
+# Present statistics to the user via the command-line.
 
 showSummary <- (fileStats : projectStats) := {
 
@@ -270,9 +274,23 @@ showSummary <- (fileStats : projectStats) := {
 
 
 
+# validateArgs
+#
+# Prevent any preventable errors, and
+# point out if any inputs cannot be interpreted correctly.
+
+validateArgs <- args := {
+
+}
+
+
+
+
 
 
 main <- function (args) {
+
+	validateArgs(args)
 
 	repoPath   <- getRepoPath(args)
 	repoFiles  <- getRepoFiles(repoPath, args)
@@ -281,8 +299,7 @@ main <- function (args) {
 		message('getting dates for each line: this might take a while...')
 	}
 
-	linePosix  <- x_(repoFiles) $ xMap(git $ blame(repoPath)) $ xSelect(xNotEmpty)
-
+	linePosix  <- x_(repoFiles) $ xMap(git $ blame(repoPath))
 	normalised <- normalisePosix(linePosix)
 
 	fileStats    <- getFileStats(repoFiles, normalised)
