@@ -15,7 +15,8 @@ Description: Fresh calculates
     this.
 
 Arguments:
-    <path>     The path to the github repository.
+    <path>     The path to the github repository. May be a relative path,
+               absolute path, or github path in the form username/reponame.
     <pattern>  An extended regular expression to determine which
                files should be summarised. Tested against the absolute
                path for each file.
@@ -33,8 +34,8 @@ Options:
 
 args <- docopt(doc)
 
-if ( xNot(xVersion(), c(0L, 38L, 0L)) ) {
-	warning("not written for use with Kiwi > 0.38.0")
+if ( xNot(xVersion(), c(0L, 37L, 0L)) ) {
+	warning("not written for use with Kiwi > 0.37.0\n")
 }
 
 
@@ -98,6 +99,7 @@ git <- ( function () {
 		location <- self $ tmppath
 		dir.create(location)
 		clone(paste0('https://github.com/', userrepo, '.git'), location)
+		cat('\n')
 		location
 	}
 
@@ -108,8 +110,7 @@ git <- ( function () {
 
 
 
-
-getRepoPath <- function (args) {
+getRepoPath <- args := {
 
 	if (args $ `--github`) {
 		git $ clone(args $ `<path>`)
@@ -123,7 +124,7 @@ getRepoPath <- function (args) {
 
 
 
-getRepoFiles <- function (path, args) {
+getRepoFiles <- (path : args) := {
 
 	if (xIsNull(args $ `<pattern>`)) {
 		git $ ls_files(path)
@@ -137,29 +138,50 @@ getRepoFiles <- function (path, args) {
 
 
 
-main <- function (args) {
 
-	repoPath <- getRepoPath(args)
-
-	repoFiles_ <- x_(getRepoFiles(repoPath, args))
-	lineDates_ <- repoFiles_ $ xMap(git $ blame(repoPath))
+normalisePosix <- times := {
 
 	# -- get the date bounds.
 	dateBounds <- list(
-		lower = lineDates_ $ xFlatten(1) $ x_MinBy(xI),
-		upper = lineDates_ $ xFlatten(1) $ x_MaxBy(xI))
+		lower = x_(times) $ xFlatten(1) $ x_MinBy(xI),
+		upper = x_(times) $ xFlatten(1) $ x_MaxBy(xI))
 
 	dateBounds $ diff <- dateBounds $ upper - dateBounds $ lower
 
 	# -- convert dates to percentage of the interval
 	# -- between oldest and newest.
 
-	normalised_ <-
-		lineDates_ $
+	# -- the oldest line = 0
+	# -- the newest line = 1
+
+	x_(times) $
 		xMap(
 			xMap(x. - dateBounds $ lower)) $
-		xMap(
+		x_Map(
 			xMap(x. / dateBounds $ diff))
+}
+
+
+
+
+showSummary <- (fileStats : projectStats) := {
+
+	print(fileStats)
+	print(projectStats)
+
+}
+
+
+
+
+
+main <- function (args) {
+
+	repoPath <- getRepoPath(args)
+
+	repoFiles_  <- x_(getRepoFiles(repoPath, args))
+	linePosix   <- repoFiles_ $ xMap(git $ blame(repoPath))
+	normalised_ <- x_(normalisePosix(linePosix))
 
 	# -- get the median and standard deviation of the dates
 	# -- within each file.
@@ -191,8 +213,7 @@ main <- function (args) {
 			xJuxtapose_(median, sd)) $
 		x_AddKeys(c('median', 'sd'))
 
-	print(fileStats)
-
+	showSummary(fileStats, projectStats)
 }
 
 
