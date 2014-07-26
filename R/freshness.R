@@ -8,6 +8,7 @@ require(methods)
 "
 Usage:
     fresh <path> [-g|--github]
+    fresh <path> <pattern> [-g|--github]
     fresh (-h | --help | --version)
 
 Description: Fresh calculates
@@ -15,7 +16,9 @@ Description: Fresh calculates
 
 Arguments:
     <path>     The path to the github repository.
-
+    <pattern>  An extended regular expression to determine which
+               files should be summarised. Tested against the absolute
+               path for each file.
 Options:
 	--github   Should the path be treated as a github repository url
 	           of the form 'username/reponame'?
@@ -23,9 +26,14 @@ Options:
 
 " -> doc
 
+
+
+
+
+
 args <- docopt(doc)
 
-if ( xNot(xVersion(), c(0, 38, 0)) ) {
+if ( xNot(xVersion(), c(0L, 38L, 0L)) ) {
 	warning("not written for use with Kiwi > 0.38.0")
 }
 
@@ -36,10 +44,6 @@ if ( xNot(xVersion(), c(0, 38, 0)) ) {
 
 
 
-
-tempPath <- function (args) {
-	tempfile(pattern = "fresh-")
-}
 
 git <- ( function () {
 
@@ -52,6 +56,8 @@ git <- ( function () {
 	toPosix <- function (time, tz) {
 		as.POSIXct(as.numeric(time), tz, origin = "1970-01-01")
 	}
+
+	self $ tmppath <- tempfile(pattern = "fresh-")
 
 	self $ abspath <- repoPath := {
 		fpath := {
@@ -89,7 +95,8 @@ git <- ( function () {
 
 	self $ clone <- userrepo := {
 
-		location <- tempPath()
+		location <- self $ tmppath
+		dir.create(location)
 		clone(paste0('https://github.com/', userrepo, '.git'), location)
 		location
 	}
@@ -102,19 +109,39 @@ git <- ( function () {
 
 
 
-main <- function (args) {
+getRepoPath <- function (args) {
 
-	repoPath <- if (args $ `--github`) {
+	if (args $ `--github`) {
 		git $ clone(args $ `<path>`)
-		tempPath()
+		git $ tmppath
 	} else {
 		args $ `<path>`
 	}
+}
 
-	print(list.files(repoPath))
 
-	repoFiles_ <- x_(git $ ls_files(repoPath))
 
+
+
+getRepoFiles <- function (path, args) {
+
+	if (xIsNull(args $ `<pattern>`)) {
+		git $ ls_files(path)
+	} else {
+		xSelect(
+			xIsMatch(args $ `<pattern>`),
+			git $ ls_files(path))
+	}
+}
+
+
+
+
+main <- function (args) {
+
+	repoPath <- getRepoPath(args)
+
+	repoFiles_ <- x_(getRepoFiles(repoPath, args))
 	lineDates_ <- repoFiles_ $ xMap(git $ blame(repoPath))
 
 	# -- get the date bounds.
@@ -164,7 +191,7 @@ main <- function (args) {
 			xJuxtapose_(median, sd)) $
 		x_AddKeys(c('median', 'sd'))
 
-	print(projectStats)
+	print(fileStats)
 
 }
 
