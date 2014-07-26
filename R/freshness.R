@@ -7,12 +7,12 @@ require(methods)
 
 "
 Usage:
-    fresh <path> [-g|--github]
-    fresh <path> <pattern> [-g|--github]
+    fresh <path> [-g|--github] [-s|--silent]
+    fresh <path> <pattern>     [-g|--github] [-s|--silent]
     fresh (-h | --help | --version)
 
-Description: Fresh calculates
-    this.
+Description:   Fresh is a command-line tool for gathering statistics on the age
+               of a git code-base.
 
 Arguments:
     <path>     The path to the github repository. May be a relative path,
@@ -24,7 +24,7 @@ Options:
 	--github   Should the path be treated as a github repository url
 	           of the form 'username/reponame'?
 	--version  Show the current version number.
-
+	--silent   Should fresh suppress all messages aside from the final result?
 " -> doc
 
 
@@ -50,21 +50,42 @@ git <- ( function () {
 
 	self <- list()
 
+	# exec
+	#
+	# Call system, intern the results.
+
 	exec <- function (...) {
 		system(paste(...), intern = True)
 	}
+
+	# toPosix
+	#
+	# Convert a number timezone pair to posix object.
 
 	toPosix <- function (time, tz) {
 		as.POSIXct(as.numeric(time), tz, origin = "1970-01-01")
 	}
 
+	# git $ tmppath
+	#
+	# The path that cloned repos are written to.
+
 	self $ tmppath <- tempfile(pattern = "fresh-")
+
+	# git $ abspath
+	#
+	# Append the repository path to a relative file path.
 
 	self $ abspath <- repoPath := {
 		fpath := {
 			file.path(repoPath, fpath)
 		}
 	}
+
+	# git $ ls_files
+	#
+	# List all files that have editable lines, using git ls-files.
+	# Filters out erroneous inputs like images.
 
 	self $ ls_files <- dpath := {
 
@@ -75,30 +96,36 @@ git <- ( function () {
 
 	}
 
+	# git $ blame
+	#
+	# Get the POSIX time associated with each line in a file
+	# as a number, adjusted for time zone.
+
 	self $ blame <- dpath := {
 		fpath := {
 
-			# -- get the posix times for each line in a file.
+	 		x_(exec(
+	 			'cd', dpath, '&&',
+	 			'git blame', fpath, '--line-porcelain')) $
+	 		xSelect(
+	 			xIsMatch('^author-time|^author-tz') )    $
+	 		xMap(xToWords %then% xSecondOf)              $
+	 		xChunk(2)                                    $
+	 		x_Map(xApply(toPosix) %then% as.numeric)
 
-		 	lineDates <-
-		 		x_(exec(
-		 			'cd', dpath, '&&',
-		 			'git blame', fpath, '--line-porcelain')) $
-		 		xSelect(
-		 			xIsMatch('^author-time|^author-tz') )    $
-		 		xMap(xToWords %then% xSecondOf)              $
-		 		xChunk(2)                                    $
-		 		x_Map(xApply(toPosix) %then% as.numeric)
-
-		 	lineDates
 		}
 	}
 
-	self $ clone <- userrepo := {
+	# git $ clone
+	#
+	# Clone a repository from github into a temporary location.
+	# Uses git2R for now; will re-implement with base R.
+
+	self $ clone <- (userrepo : isSilent) := {
 
 		location <- self $ tmppath
 		dir.create(location)
-		clone(paste0('https://github.com/', userrepo, '.git'), location)
+		clone(paste0('https://github.com/', userrepo, '.git'), location, !isSilent)
 		cat('\n')
 		location
 	}
@@ -108,12 +135,15 @@ git <- ( function () {
 } )()
 
 
-
+# getRepoPath
+#
+# Get the path from which files are to be read.
+# Depends on whether a github repo or local path was specified.
 
 getRepoPath <- args := {
 
 	if (args $ `--github`) {
-		git $ clone(args $ `<path>`)
+		git $ clone(args $ `<path>`, args $ `--silent`)
 		git $ tmppath
 	} else {
 		args $ `<path>`
@@ -122,22 +152,31 @@ getRepoPath <- args := {
 
 
 
-
+# getRepoFiles
+#
+# Return the files to check the blame of; if a pattern is given
+# some files are filtered out.
 
 getRepoFiles <- (path : args) := {
 
-	if (xIsNull(args $ `<pattern>`)) {
-		git $ ls_files(path)
-	} else {
-		xSelect(
-			xIsMatch(args $ `<pattern>`),
-			git $ ls_files(path))
-	}
+	x_(git $ ls_files(path)) $
+	x_Select(
+		if (xIsNull(args $ `<pattern>`)) {
+			xTruth
+		} else {
+			xIsMatch(args $ `<pattern>`)
+		}
+	)
+
 }
 
 
 
-
+# normalisePosix
+#
+# Takes a list of UNIX time numbers. Finds the oldest and newest numbers, and
+# sets the oldest to 0 on a scale and newest to 1. Maps every other UNIX time number
+# to a point on this interval.
 
 normalisePosix <- times := {
 
@@ -163,6 +202,64 @@ normalisePosix <- times := {
 
 
 
+# getFileStats
+#
+#
+
+getFileStats <- (repoFiles : percents) := {
+
+	x_(percents)                                  $
+	xMap(xAsDouble)                               $
+	xMap(
+		xJuxtapose_(median, sd))                  $
+	xZip_(
+		repoFiles)                                $
+	xFlatten(2)                                   $
+	xMap(
+		xJuxtapose_(
+			xFirstOf  %then% as.numeric,
+			xSecondOf %then% as.numeric,
+			xThirdOf))                            $
+	xMap(
+		xAddKeys(c('median', 'sd', 'filename')) ) $
+	xSortBy(function (x) {
+
+		val = x $ median
+
+		if (!is.numeric(val) || xIsNa(val) || xIsNan(val)) {
+			print(val)
+			print(x)
+		}
+
+		val
+	})
+
+}
+
+
+
+# getProjectStats
+#
+#
+#
+
+getProjectStats <- percents := {
+
+	x_(percents)                 $
+	xFlatten(1)                  $
+	xAsDouble()                  $
+	xTap(
+		xJuxtapose_(median, sd)) $
+	x_AddKeys(c('median', 'sd'))
+
+}
+
+
+
+# showSummary
+#
+#
+#
 
 showSummary <- (fileStats : projectStats) := {
 
@@ -177,41 +274,19 @@ showSummary <- (fileStats : projectStats) := {
 
 main <- function (args) {
 
-	repoPath <- getRepoPath(args)
+	repoPath   <- getRepoPath(args)
+	repoFiles  <- getRepoFiles(repoPath, args)
 
-	repoFiles_  <- x_(getRepoFiles(repoPath, args))
-	linePosix   <- repoFiles_ $ xMap(git $ blame(repoPath))
-	normalised_ <- x_(normalisePosix(linePosix))
+	if (!args $ `--silent`) {
+		message('getting dates for each line: this might take a while...')
+	}
 
-	# -- get the median and standard deviation of the dates
-	# -- within each file.
+	linePosix  <- x_(repoFiles) $ xMap(git $ blame(repoPath)) $ xSelect(xNotEmpty)
 
-	fileStats <-
-		normalised_                          $
-		xMap(xAsDouble)                      $
-		xMap(
-			xJuxtapose_(median, sd))         $
-		xZip_(
-			repoFiles_ $ x_Identity())       $
-		xFlatten(2)                          $
-		xMap(
-			xJuxtapose_(
-				xFirstOf  %then% as.numeric,
-				xSecondOf %then% as.numeric,
-				xThirdOf))                   $
-		xMap(
-			xAddKeys(c('median', 'sd', 'filename')) )
+	normalised <- normalisePosix(linePosix)
 
-	# -- get the median and standard deviation of the dates
-	# -- for the entire project.
-
-	projectStats <-
-		normalised_                  $
-		xFlatten(1)                  $
-		xAsDouble()                  $
-		xTap(
-			xJuxtapose_(median, sd)) $
-		x_AddKeys(c('median', 'sd'))
+	fileStats    <- getFileStats(repoFiles, normalised)
+	projectStats <- getProjectStats(normalised)
 
 	showSummary(fileStats, projectStats)
 }
