@@ -122,10 +122,8 @@ main <- function (args) {
 		xMap(xAsDouble)                               $
 		xMap(
 			xJuxtapose_(median, sd))                  $
-
 		xZip_(
 			repoFiles_ $ x_Identity())                $
-
 		xFlatten(2)                                   $
 		xMap(
 			xJuxtapose_(
@@ -135,7 +133,18 @@ main <- function (args) {
 		xMap(
 			xAddKeys(c('median', 'sd', 'filename')) )
 
-	print(fileStats)
+	# -- get the median and standard deviation of the dates
+	# -- for the entire project.
+
+	projectStats <-
+		normalised_                  $
+		xFlatten(1)                  $
+		xAsDouble()                  $
+		xTap(
+			xJuxtapose_(median, sd)) $
+		x_AddKeys(c('median', 'sd'))
+
+	print(projectStats)
 
 }
 
