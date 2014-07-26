@@ -25,6 +25,8 @@ Options:
 	            of the form 'username/reponame'?
 	--version   Show the current version number.
 	--verbose   Should fresh show messages aside from the final result?
+	--simple    Report the mean age and standard deviation for each file.
+	--program   Produce machine-readable output of age data.
 " -> doc
 
 
@@ -321,6 +323,8 @@ showSummary <- (fileStats : projectStats : reporter) := {
 
 validateArgs <- args := {
 
+
+
 }
 
 
@@ -333,6 +337,7 @@ validateArgs <- args := {
 #
 
 getReporter <- function (args) {
+
 	if (args $ report) {
 
 		x__('--simple', '--full', '--program') $
