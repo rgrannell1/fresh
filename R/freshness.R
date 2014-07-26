@@ -7,8 +7,8 @@ require(methods)
 
 "
 Usage:
-    fresh <path> [-g|--github] [--silent] [--no-color|--no-colour]
-    fresh <path> <pattern>     [--github] [--silent] [--no-color|--no-colour]
+    fresh <path> [-g|--github] [--silent] [report (--simple | --full | --program)]
+    fresh <path> <pattern>     [--github] [--silent] [report (--simple | --full | --program)]
     fresh (-h | --help | --version)
 
 Description:   Fresh is a command-line tool for gathering statistics on the age
@@ -25,10 +25,6 @@ Options:
 	            of the form 'username/reponame'?
 	--version   Show the current version number.
 	--silent    Should fresh suppress all messages aside from the final result?
-	--no-color  Disable colour in output. Required in older terminals.
-	            Fresh attempts to disable colours when they are not supported.
-	--no-colour Disable colour in output. Required in older terminals.
-	            Fresh attempts to disable colours when they are not supported.
 " -> doc
 
 
@@ -44,6 +40,61 @@ if ( xNot(xVersion(), c(0L, 37L, 0L)) ) {
 
 
 
+
+
+
+
+colourise <- local({
+	# functions that add ANSI colour codes to strings, allowing them to
+	# be colourised.
+
+	# partly adapted from Hadley Wickham's colourising code in testthat.
+	supports_colour <- function () {
+		# is a terminal colourisable?
+
+		env_vars <- Sys.getenv()
+
+		TERM      <- env_vars["TERM"]
+		COLORTERM <- env_vars["COLORTERM"]
+
+		set_env_vars <- names(env_vars)
+
+		# -- term support color.
+		matching_TERM <-
+			("TERM" %in% set_env_vars) && !is_na(TERM) && TERM %in%
+			c("screen", "screen-256color", "xterm-color", "xterm-256color")
+
+		# -- colorterm is set at all. This is required for gnome-terminal.
+		matching_COLORTERM <-
+			("COLORTERM" %in% set_env_vars) && !is_na(COLORTERM)
+
+		isTRUE(matching_TERM || matching_COLORTERM)
+
+	}
+
+	colouriser <- function (code) {
+		function (message) {
+			if (supports_colour()) {
+				"\033[" %+% code %+% message %+% "\033[0m"
+			} else {
+				message
+			}
+		}
+	}
+
+	list(
+		black =
+			colouriser("0;30m"),
+		blue =
+			colouriser("0;34m"),
+		green =
+			colouriser("0;32m"),
+		red =
+			colouriser("0;31m"),
+		yellow =
+			colouriser("1;33m")
+	)
+})
 
 
 
@@ -265,10 +316,41 @@ getProjectStats <- percents := {
 #
 # Present statistics to the user via the command-line.
 
-showSummary <- (fileStats : projectStats) := {
+showSummary <- (fileStats : projectStats : reporter) := {
 
-	print(fileStats)
-	print(projectStats)
+	if (reporter == '--simple') {
+
+		width <-
+			x_(fileStats)       $
+			xMap(x. $ filename) $
+			xMap(nchar)         $
+			x_MaxBy(xI)
+
+		msg <-
+			x_(fileStats) $
+			xMap( xUnspread((median : sd : filename) := {
+
+				paste(
+					gettextf(
+						paste0('%-', width, 's'), filename), '|',
+					format(
+						round(median, 2), nsmall = 2),
+					'+-',
+					format(
+						round(sd, 2),     nsmall = 2) )
+
+			}) )          $
+			x_FromLines()
+
+		message(msg)
+
+	}
+	if (reporter == '--full') {
+
+	}
+	if (reporter == '--program') {
+
+	}
 
 }
 
@@ -286,11 +368,33 @@ validateArgs <- args := {
 
 
 
+# getReporter
+#
+# Get the mode by which data will be displayed.
+#
+#
+
+getReporter <- function (args) {
+	if (args $ report) {
+
+		x__('--simple', '--full', '--program') $
+		xSelect(flag := args $ flag)           $
+		x_AsCharacter()
+
+	} else {
+		'--simple'
+	}
+}
+
+
+
 
 
 main <- function (args) {
 
 	validateArgs(args)
+
+	reporter   <- getReporter(args)
 
 	repoPath   <- getRepoPath(args)
 	repoFiles  <- getRepoFiles(repoPath, args)
@@ -305,7 +409,7 @@ main <- function (args) {
 	fileStats    <- getFileStats(repoFiles, normalised)
 	projectStats <- getProjectStats(normalised)
 
-	showSummary(fileStats, projectStats)
+	showSummary(fileStats, projectStats, reporter)
 }
 
 
