@@ -265,31 +265,34 @@ showSummary <- (fileStats : projectStats : reporter) := {
 			xMap(nchar)         $
 			x_MaxBy(xI)
 
+		colourise <- kiwi ::: colourise
+
 		msg <-
 			x_(fileStats) $
 			xMap( xUnspread((median : sd : filename) := {
+
+				print('asd')
 
 				filename <- gsub(git $ tmppath, '.', row $ filename, fixed = TRUE)
 
 				paste(
 					gettextf(
 						paste0('%-', width, 's'), filename), '|',
-					kiwi ::: colourise $ blue(format(
+					colourise $ blue(format(
 						round(median, 2), nsmall = 2)),
 					'+-',
-					kiwi ::: colourise $ blue(format(
+					colourise $ blue(format(
 						round(sd, 2),     nsmall = 2)) )
+
 
 			}) )          $
 			x_FromLines()
 
 		message(msg)
 
-	}
-	if (reporter == '--full') {
+	} else if (reporter == '--full') {
 
-	}
-	if (reporter == '--program') {
+	}else if (reporter == '--program') {
 
 		msg <-
 			x_(fileStats)                 $
