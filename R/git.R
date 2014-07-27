@@ -14,7 +14,7 @@ git <- ( function () {
 	# Call system, intern the results.
 
 	exec <- function (...) {
-		system(paste(...), intern = True)
+		system(paste(...), intern = True, ignore.stderr = False)
 	}
 
 	# toPosix

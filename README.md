@@ -15,6 +15,12 @@ It can also indicate if a project is stagnant or rapidly evolving.
 Fresh is VERY slow for large repositories, as git must fetch modification dates
 for each line in every file in a project.
 
+### Usage
+
+```bash
+fresh git::rgrannell1/fresh
+```
+
 ### Requirements
 
 #### General:
@@ -32,8 +38,6 @@ for each line in every file in a project.
 
 ### Installation
 
-
-
 ```R
 if (!require(devtools)) {
     install.packages("devtools"); library(devtools)
@@ -43,12 +47,6 @@ devtools :: install_github("rgrannell1/kiwi", ref = 'v0.37.0')
 devtools :: install_github("ropensci/git2r")
 devtools :: install_github("edwindj/docopt.R")
 
-```
-
-### Usage
-
-```bash
-fresh rgrannell1/fresh --github
 ```
 
 ### License

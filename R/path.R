@@ -9,7 +9,11 @@ path <- ( function () {
 
 	self <- list()
 
+	# the operating system specific file seperator.
+
 	self $ fsep <- .Platform $ file.sep
+
+	# join two paths, possibly with /
 
 	self $ join <- (path1 : path2) := {
 
@@ -37,7 +41,11 @@ path <- ( function () {
 
 	}
 
-	self $ components <- xExplode('/')
+	# get each delimited section of a path.
+
+	self $ components <- xExplode(self $ fsep)
+
+	# get the file portion of a path.
 
 	self $ basename   <- self $ components %then% xLastOf
 
