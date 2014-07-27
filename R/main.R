@@ -76,6 +76,8 @@ normalisePosix <- times := {
 	} else {
 		# -- get the date bounds.
 
+		print(times)
+
 		dateBounds <- list(
 			lower = x_(times) $ xFlatten(1) $ x_MinBy(xI),
 			upper = x_(times) $ xFlatten(1) $ x_MaxBy(xI))
@@ -178,7 +180,7 @@ main <- function (args) {
 	linePosix  <- x_(repoFiles) $ x_Map(git $ blame(repoPath))
 
 	if (xIsEmpty(linePosix)) {
-		stop('')
+		return('')
 	}
 
 	normalised <- normalisePosix(linePosix)

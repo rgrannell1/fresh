@@ -18,7 +18,7 @@ for each line in every file in a project.
 ### Usage
 
 ```bash
-fresh git::rgrannell1/fresh
+fresh git::rgrannell1/kiwi
 ```
 
 ### Requirements
@@ -46,7 +46,6 @@ if (!require(devtools)) {
 devtools :: install_github("rgrannell1/kiwi", ref = 'v0.37.0')
 devtools :: install_github("ropensci/git2r")
 devtools :: install_github("edwindj/docopt.R")
-
 ```
 
 ### License
