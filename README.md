@@ -4,8 +4,13 @@ Fresh
 Fresh is a command-line tool for gathering statistics on
 the age of a git code-base.
 
+<img src="fresh.gif"> </img>
+
 Code-age is a useful metric for determining what code has been
-overlooked and needs maintainance or what code is fresh and needs testing.
+overlooked and needs maintainance or what code is fresh and needs testing. Maintaining
+large code-bases is difficult, so fresh is another tool to determine what needs work.
+
+It can also indicate if a project is stagnant or rapidly evolving.
 
 Fresh is VERY slow for large repositories, as git must fetch modification dates
 for each line in every file in a project.
@@ -13,7 +18,7 @@ for each line in every file in a project.
 ### Usage
 
 ```bash
-fresh rgrannell1/fresh --github | less
+fresh rgrannell1/fresh --github
 ```
 
 ### License

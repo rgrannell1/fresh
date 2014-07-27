@@ -7,8 +7,8 @@ require(methods, quietly = TRUE, warn.conflicts = FALSE)
 
 "
 Usage:
-    fresh <path> [-g|--github] [--verbose] [report (--simple | --full | --program)]
-    fresh <path> <pattern>     [--github] [--verbose] [report (--simple | --full | --program)]
+    fresh <path> [--verbose] [report (--simple | --full | --program)]
+    fresh <path> <pattern> [--verbose] [report (--simple | --full | --program)]
     fresh (-h | --help | --version)
 
 Description:   Fresh is a command-line tool for gathering statistics on the age
@@ -16,13 +16,11 @@ Description:   Fresh is a command-line tool for gathering statistics on the age
 
 Arguments:
     <path>      The path to the github repository. May be a relative path,
-                absolute path, or github path in the form username/reponame.
+                absolute path, or github path in the form @username/reponame.
     <pattern>   An extended regular expression to determine which
                 files should be summarised. Tested against the absolute
                 path for each file.
 Options:
-	--github    Should the path be treated as a github repository url
-	            of the form 'username/reponame'?
 	--version   Show the current version number.
 	--verbose   Should fresh show messages aside from the final result?
 	--simple    Report the mean age and standard deviation for each file.
@@ -138,16 +136,18 @@ git <- ( function () {
 
 } )()
 
-
-# getRepoPath
+# getRepoPaths
 #
 # Get the path from which files are to be read.
 # Depends on whether a github repo or local path was specified.
 
 getRepoPath <- args := {
 
-	if (args $ `--github`) {
-		git $ clone(args $ `<path>`, args $ `--verbose`)
+	if (x_(args $ `--<path>`) $ xSliceString(nums = 1) $ x_Is('@') ) {
+
+		github_repo <- x_(args $ `<path>`)$ x_SliceString(nums = -1)
+
+		git $ clone(github_repo, args $ `--verbose`)
 		git $ tmppath
 	} else {
 		args $ `<path>`
@@ -322,7 +322,6 @@ showSummary <- (fileStats : projectStats : reporter) := {
 # point out if any inputs cannot be interpreted correctly.
 
 validateArgs <- args := {
-
 
 
 }
