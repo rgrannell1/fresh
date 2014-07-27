@@ -14,6 +14,13 @@ Usage:
 Description:   Fresh is a command-line tool for gathering statistics on the age
                of a git code-base.
 
+
+
+
+
+
+
+
 Arguments:
     <path>      The path to the github repository. May be a relative path,
                 absolute path, or github path in the form @username/reponame.
@@ -91,11 +98,14 @@ git <- ( function () {
 
 	self $ ls_files <- dpath := {
 
-		x_(exec('cd', dpath, '&&', 'git ls-files')) $
-		xMap(self $ abspath(dpath))                 $
-		x_Reject(
-			xIsMatch('jpg$|png$|jpeg$'))
-
+		if (!file.exists(dpath)) {
+			list(0)
+		} else {
+			x_(exec('cd', dpath, '&&', 'git ls-files')) $
+			xMap(self $ abspath(dpath))                 $
+			x_Reject(
+				xIsMatch('jpg$|png$|jpeg$'))
+		}
 	}
 
 	# git $ blame
@@ -106,15 +116,18 @@ git <- ( function () {
 	self $ blame <- dpath := {
 		fpath := {
 
-	 		x_(exec(
-	 			'cd', dpath, '&&',
-	 			'git blame', fpath, '--line-porcelain')) $
-	 		xSelect(
-	 			xIsMatch('^author-time|^author-tz') )    $
-	 		xMap(xToWords %then% xSecondOf)              $
-	 		xChunk(2)                                    $
-	 		x_Map(xApply(toPosix) %then% as.numeric)
-
+			if (!file.exists(dpath)) {
+				list()
+			} else {
+		 		x_(exec(
+		 			'cd', dpath, '&&',
+		 			'git blame', fpath, '--line-porcelain')) $
+		 		xSelect(
+		 			xIsMatch('^author-time|^author-tz') )    $
+		 		xMap(xToWords %then% xSecondOf)              $
+		 		xChunk(2)                                    $
+		 		x_Map(xApply(toPosix) %then% as.numeric)
+			}
 		}
 	}
 
@@ -184,24 +197,29 @@ getRepoFiles <- (path : args) := {
 
 normalisePosix <- times := {
 
-	# -- get the date bounds.
-	dateBounds <- list(
-		lower = x_(times) $ xFlatten(1) $ x_MinBy(xI),
-		upper = x_(times) $ xFlatten(1) $ x_MaxBy(xI))
+	if (xIsEmpty(times)) {
+		list()
+	} else {
+		# -- get the date bounds.
+		dateBounds <- list(
+			lower = x_(times) $ xFlatten(1) $ x_MinBy(xI),
+			upper = x_(times) $ xFlatten(1) $ x_MaxBy(xI))
 
-	dateBounds $ diff <- dateBounds $ upper - dateBounds $ lower
+		dateBounds $ diff <- dateBounds $ upper - dateBounds $ lower
 
-	# -- convert dates to percentage of the interval
-	# -- between oldest and newest.
+		# -- convert dates to percentage of the interval
+		# -- between oldest and newest.
 
-	# -- the oldest line = 0
-	# -- the newest line = 1
+		# -- the oldest line = 0
+		# -- the newest line = 1
 
-	x_(times) $
-		xMap(
-			xMap(x. - dateBounds $ lower)) $
-		x_Map(
-			xMap(x. / dateBounds $ diff))
+		x_(times) $
+			xMap(
+				xMap(x. - dateBounds $ lower)) $
+			x_Map(
+				xMap(x. / dateBounds $ diff))
+	}
+
 }
 
 
@@ -366,7 +384,12 @@ main <- function (args) {
 		message('getting dates for each line (slow)')
 	}
 
-	linePosix  <- x_(repoFiles) $ xMap(git $ blame(repoPath))
+	linePosix  <- x_(repoFiles) $ x_Map(git $ blame(repoPath))
+
+	if (xIsEmpty(linePosix)) {
+		stop('')
+	}
+
 	normalised <- normalisePosix(linePosix)
 
 	if (args $ `--verbose`) {
@@ -382,6 +405,7 @@ main <- function (args) {
 	projectStats <- getProjectStats(normalised)
 
 	showSummary(fileStats, projectStats, reporter)
+
 }
 
 
