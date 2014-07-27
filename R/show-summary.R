@@ -1,26 +1,22 @@
 
+source('R/colourise.R', True)
+
 require(kiwi, quietly = TRUE, warn.conflicts = FALSE)
 
 
 
 
+report <- ( function () {
 
+	self <- list()
 
-# showSummary
-#
-# Present statistics to the user via the command-line.
-
-showSummary <- (fileStats : projectStats : reporter) := {
-
-	if (reporter == '--simple') {
+	self $ simple <- function (fileStats) {
 
 		width <-
 			x_(fileStats)       $
 			xMap(x. $ filename) $
 			xMap(nchar)         $
 			x_MaxBy(xI)
-
-		colourise <- kiwi ::: colourise
 
 		msg <-
 			x_(fileStats) $
@@ -42,6 +38,21 @@ showSummary <- (fileStats : projectStats : reporter) := {
 			x_FromLines()
 
 		message(msg)
+	}
+
+	self
+
+})()
+
+# showSummary
+#
+# Present statistics to the user via the command-line.
+
+showSummary <- (fileStats : projectStats : reporter) := {
+
+	if (reporter == '--simple') {
+
+		report $ simple(fileStats)
 
 	} else if (reporter == '--full') {
 

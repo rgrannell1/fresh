@@ -2,16 +2,13 @@
 require(kiwi,  quietly = TRUE, warn.conflicts = FALSE)
 require(git2r, quietly = TRUE, warn.conflicts = FALSE)
 
-import <- source
-
-import('R/git.R',          True)
-import('R/path.R',         True)
-import('R/show-summary.R', True)
+source('R/git.R',          True)
+source('R/path.R',         True)
+source('R/show-summary.R', True)
 
 if ( xNot(xVersion(), c(0L, 37L, 0L)) ) {
 	warning("not written for use with Kiwi > 0.37.0\n")
 }
-
 
 
 
@@ -76,7 +73,9 @@ normalisePosix <- times := {
 	} else {
 		# -- get the date bounds.
 
-		print(times)
+		if ( xNotNull(warnings()) ) {
+			warning(warnings()[[1]])
+		}
 
 		dateBounds <- list(
 			lower = x_(times) $ xFlatten(1) $ x_MinBy(xI),
