@@ -15,6 +15,36 @@ It can also indicate if a project is stagnant or rapidly evolving.
 Fresh is VERY slow for large repositories, as git must fetch modification dates
 for each line in every file in a project.
 
+### Requirements
+
+#### General:
+
+* R
+* Git
+* A UNIX operating system (tested on Ubuntu 14.04.1)
+
+#### Packages:
+
+* Docopt
+* Methods
+* Git2R
+* Kiwi v0.37.0
+
+### Installation
+
+
+
+```R
+if (!require(devtools)) {
+    install.packages("devtools"); library(devtools)
+}
+
+devtools :: install_github("rgrannell1/kiwi", ref = 'v0.37.0')
+devtools :: install_github("ropensci/git2r")
+devtools :: install_github("edwindj/docopt.R")
+
+```
+
 ### Usage
 
 ```bash
