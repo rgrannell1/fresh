@@ -5,6 +5,19 @@ require(git2r,   quietly = TRUE, warn.conflicts = FALSE)
 require(docopt,  quietly = TRUE, warn.conflicts = FALSE)
 require(methods, quietly = TRUE, warn.conflicts = FALSE)
 
+
+
+
+
+import <- source
+
+import('R/git.R',  True)
+import('R/path.R', True)
+
+
+
+
+
 "
 Usage:
     fresh <path> [--verbose] [report (--simple | --full | --program)]
@@ -48,149 +61,6 @@ if ( xNot(xVersion(), c(0L, 37L, 0L)) ) {
 
 
 
-
-
-
-
-
-path <- ( function () {
-
-	self <- list()
-
-	self $ fsep <- .Platform $ file.sep
-
-	self $ join <- (path1 : path2) := {
-
-		if (nchar(path1) == 0) {
-			path2
- 		} else if (nchar(path2) == 0) {
- 			path1
- 		} else {
-
-			path1_is_slashed <-
-				xSliceString(nchar(path1), path1) == self $ fsep
-
-			path2_is_slashed <-
-				xSliceString(1, path2) == self $ fsep
-
-			if (path1_is_slashed && path2_is_slashed) {
-				xFromChars_(path1, xSliceString(-1, path2))
-			} else if (path1_is_slashed || path2_is_slashed) {
-				xFromChars_(path1, path2)
-			} else {
-				xFromChars_(path1, self $ fsep, path2)
-			}
-
- 		}
-
-	}
-
-	self $ components <- xExplode('/')
-
-	self $ basename   <- self $ components %then% xLastOf
-
-	self
-
-} )()
-
-
-
-
-
-
-git <- ( function () {
-
-	self <- list()
-
-	# exec
-	#
-	# Call system, intern the results.
-
-	exec <- function (...) {
-		system(paste(...), intern = True)
-	}
-
-	# toPosix
-	#
-	# Convert a number timezone pair to posix object.
-
-	toPosix <- function (time, tz) {
-		as.POSIXct(as.numeric(time), tz, origin = "1970-01-01")
-	}
-
-	# git $ tmppath
-	#
-	# The path that cloned repos are written to.
-
-	self $ tmppath <- tempfile(pattern = "fresh-")
-
-	# git $ abspath
-	#
-	# Append the repository path to a relative file path.
-
-	self $ abspath <- repoPath := {
-		fpath := {
-			file.path(repoPath, fpath)
-		}
-	}
-
-	# git $ ls_files
-	#
-	# List all files that have editable lines, using git ls-files.
-	# Filters out erroneous inputs like images.
-
-	self $ ls_files <- dpath := {
-
-		if (!file.exists(dpath)) {
-			list(0)
-		} else {
-			x_(exec('cd', dpath, '&&', 'git ls-files')) $
-			xMap(self $ abspath(dpath))                 $
-			x_Reject(
-				xIsMatch('jpg$|png$|jpeg$'))
-		}
-	}
-
-	# git $ blame
-	#
-	# Get the POSIX time associated with each line in a file
-	# as a number, adjusted for time zone.
-
-	self $ blame <- dpath := {
-		fpath := {
-
-			if (!file.exists(dpath)) {
-				list()
-			} else {
-		 		x_(exec(
-		 			'cd', dpath, '&&',
-		 			'git blame', fpath, '--line-porcelain')) $
-		 		xSelect(
-		 			xIsMatch('^author-time|^author-tz') )    $
-		 		xMap(xToWords %then% xSecondOf)              $
-		 		xChunk(2)                                    $
-		 		x_Map(xApply(toPosix) %then% as.numeric)
-			}
-		}
-	}
-
-	# git $ clone
-	#
-	# Clone a repository from github into a temporary location.
-	# Uses git2R for now; will re-implement with base R.
-
-	self $ clone <- (userrepo : isVerbose) := {
-
-		location <- self $ tmppath
-		dir.create(location)
-		clone(paste0('https://github.com/', userrepo, '.git'), location, isVerbose)
-		cat('\n')
-		location
-	}
-
-	self
-
-} )()
 
 # getRepoPaths
 #
