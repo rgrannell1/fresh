@@ -143,7 +143,7 @@ git <- ( function () {
 
 getRepoPath <- args := {
 
-	if (x_(args $ `--<path>`) $ xSliceString(nums = 1) $ x_Is('@') ) {
+	if (x_(args $ `<path>`) $ xToChars() $ x_FirstOf() =='@' ) {
 
 		github_repo <- x_(args $ `<path>`)$ x_SliceString(nums = -1)
 
