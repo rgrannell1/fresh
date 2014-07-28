@@ -56,10 +56,38 @@ report <- ( function () {
 		}
 
 		width <-
-			x_(fileStats)                 $
-			xMap(x. $ filename)           $
-			xMap(xFromChars %then% nchar) $
+			x_(fileStats)             $
+			xMap(x. $ filename)       $
+			xMap(parts := {
+
+				x_(xIndicesOf(parts)) $
+				xMap(ith := {
+					2 * ith + nchar( parts[[ith]] )
+				})                    $
+				x_MaxBy(xI)
+
+			})                        $
 			x_MaxBy(xI)
+
+		# format_row
+		#
+		# given a list containing the median, sd and components of a path,
+		# return a printable line summarising the file.
+
+		format_row <- (name : row) := {
+
+			basename_string <- gettextf(
+				paste0('%-', width, 's'), name)
+
+			median_string   <- colourise $ blue(format(
+				round(row $ median, 2),   nsmall = 2))
+
+			sd_string       <- colourise $ blue(format(
+				round(row $ sd, 2),       nsmall = 2))
+
+			paste(basename_string, '|', median_string, '+-', sd_string)
+
+		}
 
 		add_tabs <- (li : parent : depth) := {
 
@@ -75,23 +103,12 @@ report <- ( function () {
 				padded_name <- pad( depth, paste0(sep, xFirstOf(li)) )
 
 				parent      <- c(parent, name)
-				match       <- xSelect(
-					xAtKey('filename') %then% xIs(parent), fileStats)
+				match       <- x_(fileStats) $
+					x_Select(
+						xAtKey('filename') %then% xIs(parent))
 
 				line <- if (xNotEmpty(match)) {
-
-					median <- xFirstOf(match) $ median
-					sd     <- xFirstOf(match) $ sd
-
-					padded_name <- paste(
-						gettextf(
-							paste0('%-', width, 's'), padded_name), '|',
-						colourise $ blue(format(
-							round(median, 2), nsmall = 2)),
-						'+-',
-						colourise $ blue(format(
-							round(sd, 2),     nsmall = 2)) )
-
+					format_row(padded_name, xFirstOf(match))
 				} else {
 					padded_name
 				}
