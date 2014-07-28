@@ -73,10 +73,6 @@ normalisePosix <- times := {
 	} else {
 		# -- get the date bounds.
 
-		if ( xNotNull(warnings()) ) {
-			warning(warnings()[[1]])
-		}
-
 		dateBounds <- list(
 			lower = x_(times) $ xFlatten(1) $ x_MinBy(xI),
 			upper = x_(times) $ xFlatten(1) $ x_MaxBy(xI))

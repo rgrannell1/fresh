@@ -12,6 +12,10 @@ report <- ( function () {
 
 	self <- list()
 
+	# self $ simple
+	#
+	# summarise files and folders in a heirarchy.
+
 	self $ simple <- function (fileStats) {
 
 		path_components <-
@@ -28,7 +32,7 @@ report <- ( function () {
 		fileStats <-
 			x_(fileStats)            $
 			x_Map(stats := {
-				stats $ filename <- path $ components( stats $ filename )
+				stats $ filename <- path $ components(stats $ filename)
 				stats
 			})
 
@@ -62,7 +66,7 @@ report <- ( function () {
 
 				x_(xIndicesOf(parts)) $
 				xMap(ith := {
-					2 * ith + nchar( parts[[ith]] )
+					4 * ith + nchar( parts[[ith]] )
 				})                    $
 				x_MaxBy(xI)
 
@@ -90,14 +94,14 @@ report <- ( function () {
 		}
 
 		combine_stats <- stats := {
-			summary <- x_(stats) $ x_Fold((acc :current) := {
 
-				acc $ median <- acc $ median + current $ median
-				acc
+			summary <- list()
+			summary $ median <-
+				x_(stats) $ xMap(x. $ median) $ x_Reduce(`+`) / xLenOf(stats)
 
-			}, list(sd = 0, median = 0, obs = 0))
+			summary $ sd <-
+				x_(stats) $ xMap(x. $ sd)     $ x_Reduce(`+`) / xLenOf(stats)
 
-			summary $ median <- summary $ median / xLenOf(stats)
 			summary
 		}
 
@@ -109,19 +113,21 @@ report <- ( function () {
 					xNotEmpty(xSecondOf(li)) &&
 					!is.character( xFirstOf(xSecondOf(li)) )
 
-				sep <- if (is_directory) path $ fsep else ''
+				sep          <- if (is_directory) path $ fsep else ''
 
-				name        <- xFirstOf(li)
-				padded_name <- pad( depth, paste0(sep, xFirstOf(li)) )
+				name         <- xFirstOf(li)
+				padded_name  <- pad( depth, paste0(sep, xFirstOf(li)) )
 
-				parent      <- c(parent, name)
-				parentStats <- x_(fileStats) $
+				parent       <- c(parent, name)
+				parentStats  <- x_(fileStats) $
 					x_Select(
 						xAtKey('filename') %then% xIs(parent))
 
 				line <- if (xNotEmpty(parentStats)) {
 					format_row(padded_name, xFirstOf(parentStats), 'blue')
 				} else {
+
+					# get all members of the folder, and get a composite statistic.
 
 					children <-
 						x_(fileStats) $
@@ -136,7 +142,7 @@ report <- ( function () {
 				}
 
 				contents <- x_(li) $ xSecondOf() $ x_Map(elem := {
-					add_tabs(elem, parent, depth + 2)
+					add_tabs(elem, parent, depth + 4)
 				})
 
 				list(line, contents)
