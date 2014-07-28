@@ -119,11 +119,12 @@ getFileStats <- (repoFiles : percents) := {
 		xJuxtapose_(
 			xFirstOf  %then% as.numeric,
 			xSecondOf %then% as.numeric,
+			length,
 			xThirdOf))                                         $
 	xReject(
 		(xFirstOf %then% xIsNa) %or% (xSecondOf %then% xIsNa)) $
 	xMap(
-		xAddKeys(c('median', 'sd', 'filename')) )              $
+		xAddKeys(c('median', 'sd', 'obs', 'filename')) )              $
 	x_SortBy(x. $ median)
 
 }
@@ -140,8 +141,8 @@ getProjectStats <- percents := {
 	xFlatten(1)                  $
 	xAsDouble()                  $
 	xTap(
-		xJuxtapose_(median, sd)) $
-	x_AddKeys(c('median', 'sd'))
+		xJuxtapose_(median, sd, length)) $
+	x_AddKeys(c('median', 'sd', 'obs'))
 
 }
 
@@ -195,6 +196,10 @@ main <- function (args) {
 	}
 
 	projectStats <- getProjectStats(normalised)
+
+	if (args $ `--verbose`) {
+		message('reporting the summary')
+	}
 
 	showSummary(fileStats, projectStats, reporter)
 }

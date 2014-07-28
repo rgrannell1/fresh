@@ -74,19 +74,33 @@ report <- ( function () {
 		# given a list containing the median, sd and components of a path,
 		# return a printable line summarising the file.
 
-		format_row <- (name : row) := {
+		format_row <- (name : row : colour) := {
 
 			basename_string <- gettextf(
 				paste0('%-', width, 's'), name)
 
-			median_string   <- colourise $ blue(format(
+			median_string   <- colourise [[colour]](format(
 				round(row $ median, 2),   nsmall = 2))
 
-			sd_string       <- colourise $ blue(format(
+			sd_string       <- colourise [[colour]](format(
 				round(row $ sd, 2),       nsmall = 2))
 
 			paste(basename_string, '|', median_string, '+-', sd_string)
 
+		}
+
+		combine_stats <- stats := {
+			summary <- x_(stats) $ x_Fold((acc :current) := {
+
+				acc $ median <- current $ median * current $ obs
+				acc $ obs    <- current $ obs
+
+				acc
+
+			}, list(sd = 0, median = 0, obs = 0))
+
+			summary $ median <- summary $ median / summary $ obs
+			summary
 		}
 
 		add_tabs <- (li : parent : depth) := {
@@ -108,9 +122,18 @@ report <- ( function () {
 						xAtKey('filename') %then% xIs(parent))
 
 				line <- if (xNotEmpty(match)) {
-					format_row(padded_name, xFirstOf(match))
+					format_row(padded_name, xFirstOf(match), 'blue')
 				} else {
-					padded_name
+
+					children <-
+						x_(fileStats) $
+						x_Select(
+							xAtKey('filename')    %then%
+							xTake(xLenOf(parent)) %then%
+							xAsCharacter()        %then%
+							xIs(parent))
+
+					format_row(padded_name, combine_stats(children), 'green')
 				}
 
 				contents <- x_(li) $ xSecondOf() $ x_Map(elem := {
