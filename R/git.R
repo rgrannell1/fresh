@@ -37,7 +37,7 @@ git <- ( function () {
 
 	self $ abspath <- repoPath := {
 		fpath := {
-			file.path(repoPath, fpath)
+			path $ join(repoPath, fpath)
 		}
 	}
 

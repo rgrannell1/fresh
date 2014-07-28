@@ -41,13 +41,19 @@ path <- ( function () {
 
 	}
 
+	self $ collapse <- (...) := {
+		xImplode(self $ fsep, ...)
+	}
+
 	# get each delimited section of a path.
 
 	self $ components <- xExplode(self $ fsep)
 
 	# get the file portion of a path.
 
-	self $ basename   <- self $ components %then% xLastOf
+	self $ apex_split <- xJuxtapose_(
+		xExplode(self $ fsep) %then% xFirstOf,
+		xExplode(self $ fsep) %then% xDrop(1) %then% xImplode(self $ fsep)) %then% xAsCharacter
 
 	self
 

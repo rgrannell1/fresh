@@ -9,7 +9,7 @@ import('R/main.R',  TRUE)
 
 "
 Usage:
-    fresh <path> [--verbose] [report (--simple | --full | --program)]
+    fresh <path> [--verbose]           [report (--simple | --full | --program)]
     fresh <path> <pattern> [--verbose] [report (--simple | --full | --program)]
     fresh (-h | --help | --version)
 
@@ -27,6 +27,8 @@ Options:
 	--verbose   Should fresh show messages aside from the final result?
 	--simple    Report the mean age and standard deviation for each file.
 	--program   Produce machine-readable output of age data.
+    --lower     The lower
+    --upper     The upper
 " -> doc
 
 

@@ -188,7 +188,7 @@ main <- function (args) {
 		message('summarising each file')
 	}
 
-	fileStats    <- getFileStats(repoFiles, normalised)
+	fileStats  <- getFileStats(repoFiles, normalised)
 
 	if (args $ `--verbose`) {
 		message('summarising the project')
