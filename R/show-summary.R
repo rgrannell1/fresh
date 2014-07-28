@@ -12,11 +12,20 @@ report <- ( function () {
 
 	self <- list()
 
-	# self $ simple
+	# report $ simple
 	#
 	# summarise files and folders in a heirarchy.
 
-	self $ simple <- function (fileStats) {
+	self $ `--simple` <- function (fileStats, range = c(0, 1)) {
+
+		fileStats <-
+			x_(fileStats) $
+			x_Select(row := {
+
+				row $ median >= range[1] &&
+				row $ median <= range[2]
+
+			})
 
 		path_components <-
 			x_(fileStats)            $
@@ -95,14 +104,14 @@ report <- ( function () {
 
 		combine_stats <- stats := {
 
-			summary <- list()
-			summary $ median <-
+			stat <- list()
+			stat $ median <-
 				x_(stats) $ xMap(x. $ median) $ x_Reduce(`+`) / xLenOf(stats)
 
-			summary $ sd <-
+			stat $ sd <-
 				x_(stats) $ xMap(x. $ sd)     $ x_Reduce(`+`) / xLenOf(stats)
 
-			summary
+			stat
 		}
 
 		add_tabs <- (li : parent : depth) := {
@@ -153,35 +162,29 @@ report <- ( function () {
 			xFirstOf(group_again(path_components, 2)), c(), 0)
 
 		msg <- x_(tree) $ xFlatten(1) $ xUniqueOf() $ x_FromLines()
+		message(msg)
 
-		cat(msg, '\n')
 	}
 
-	self
-
-})()
 
 
 
 
 
+	# report $ program
+	#
+	# machine readable summary.
 
-# showSummary
-#
-# Present statistics to the user via the command-line.
-
-showSummary <- (fileStats : projectStats : reporter) := {
-
-	if (reporter == '--simple') {
-
-		report $ simple(fileStats)
-
-	} else if (reporter == '--full') {
-
-	} else if (reporter == '--program') {
+	self $ `--program` <- function (fileStats, range = c(0, 1)) {
 
 		msg <-
 			x_(fileStats)                 $
+			xSelect(row := {
+
+				row $ median >= range[1] &&
+				row $ median <= range[2]
+
+			})                            $
 			xMap(row := {
 
 				row $ filename <-
@@ -198,6 +201,21 @@ showSummary <- (fileStats : projectStats : reporter) := {
 
 	}
 
+	self
+
+})()
+
+
+
+
+
+
+# showSummary
+#
+# Present statistics to the user via the command-line.
+
+showSummary <- (fileStats : projectStats : reporter : range) := {
+	report [[reporter]](fileStats, range)
 }
 
 

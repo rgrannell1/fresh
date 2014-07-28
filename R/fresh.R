@@ -9,8 +9,8 @@ import('R/main.R',  TRUE)
 
 "
 Usage:
-    fresh <path> [--verbose]           [report (--simple | --full | --program)]
-    fresh <path> <pattern> [--verbose] [report (--simple | --full | --program)]
+    fresh <path> [--verbose]           [report (--simple | --full | --program)] [in range <lower> <upper>]
+    fresh <path> <pattern> [--verbose] [report (--simple | --full | --program)] [in range <lower> <upper>]
     fresh (-h | --help | --version)
 
 Description:   Fresh is a command-line tool for gathering statistics on the age
@@ -22,13 +22,13 @@ Arguments:
     <pattern>   An extended regular expression to determine which
                 files should be summarised. Tested against the absolute
                 path for each file.
+    <lower>     The number.
+    <upper>     The number.
 Options:
 	--version   Show the current version number.
 	--verbose   Should fresh show messages aside from the final result?
 	--simple    Report the mean age and standard deviation for each file.
 	--program   Produce machine-readable output of age data.
-    --lower     The lower
-    --upper     The upper
 " -> doc
 
 

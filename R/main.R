@@ -197,5 +197,8 @@ main <- function (args) {
 		message('reporting the summary')
 	}
 
-	showSummary(fileStats, projectStats, reporter)
+	showSummary(fileStats, projectStats, reporter, c(
+		as.numeric(args $ `<lower>`),
+		as.numeric(args $ `<upper>`)
+	))
 }
