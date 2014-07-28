@@ -18,7 +18,19 @@ report <- ( function () {
 			x_(fileStats)            $
 			xMap(x. $ filename)      $
 			xMap(path $ components)  $
-			xGroupBy(xFirstOf)
+			x_GroupBy(xFirstOf)
+
+		components <-
+			x_(fileStats)            $
+			xMap(x. $ filename)      $
+			x_Map(path $ components)
+
+		fileStats <-
+			x_(fileStats)            $
+			x_Map(stats := {
+				stats $ filename <- path $ components( stats $ filename )
+				stats
+			})
 
 		group_again <- (grouped : ith) := {
 
@@ -39,70 +51,75 @@ report <- ( function () {
 
 		}
 
-
-
-
-		path_tree <- xFirstOf(group_again(path_components, 2))
-
 		pad <- (num : string) := {
 			strwrap(string, indent = num)
 		}
 
+		width <-
+			x_(fileStats)                 $
+			xMap(x. $ filename)           $
+			xMap(xFromChars %then% nchar) $
+			x_MaxBy(xI)
+
 		add_tabs <- (li : parent : depth) := {
 
-			if (is.character(li)) {
-				if ( xNot(li, gsub('^[ ]+', '', li)) ) {
-					pad(depth, xLastOf(li))
-				}
-			} else {
+			if (!is.character(li)) {
 
-				name     <- pad(depth, xFirstOf(li))
-				contents <- x_(xSecondOf(li)) $ xMap(elem := {
-					add_tabs(elem, name, depth + 2)
+				is_directory <-
+					xNotEmpty(xSecondOf(li)) &&
+					!is.character( xFirstOf(xSecondOf(li)) )
+
+				sep <- if (is_directory) path $ fsep else ''
+
+				name        <- xFirstOf(li)
+				padded_name <- pad( depth, paste0(sep, xFirstOf(li)) )
+
+				parent      <- c(parent, name)
+				match       <- xSelect(
+					xAtKey('filename') %then% xIs(parent), fileStats)
+
+				line <- if (xNotEmpty(match)) {
+
+					median <- xFirstOf(match) $ median
+					sd     <- xFirstOf(match) $ sd
+
+					padded_name <- paste(
+						gettextf(
+							paste0('%-', width, 's'), padded_name), '|',
+						colourise $ blue(format(
+							round(median, 2), nsmall = 2)),
+						'+-',
+						colourise $ blue(format(
+							round(sd, 2),     nsmall = 2)) )
+
+				} else {
+					padded_name
+				}
+
+				contents <- x_(li) $ xSecondOf() $ x_Map(elem := {
+					add_tabs(elem, parent, depth + 2)
 				})
 
-				list(name, contents)
+				list(line, contents)
 			}
 		}
 
-		tree <- add_tabs(path_tree, '', 0)
+		tree <- add_tabs(
+			xFirstOf(group_again(path_components, 2)), c(), 0)
 
-		aa = x_(tree) $ xFlatten(1) $ xUniqueOf() $ x_FromLines()
+		msg <- x_(tree) $ xFlatten(1) $ xUniqueOf() $ x_FromLines()
 
-		cat(aa, '\n')
-
-
-		width <-
-			x_(fileStats)       $
-			xMap(x. $ filename) $
-			xMap(nchar)         $
-			x_MaxBy(xI)
-
-		msg <-
-			x_(fileStats) $
-			xMap( xUnspread((median : sd : filename) := {
-
-				filename <- gsub(git $ tmppath, '.', filename, fixed = TRUE)
-
-				paste(
-					gettextf(
-						paste0('%-', width, 's'), filename), '|',
-					colourise $ blue(format(
-						round(median, 2), nsmall = 2)),
-					'+-',
-					colourise $ blue(format(
-						round(sd, 2),     nsmall = 2)) )
-
-
-			}) )          $
-			x_FromLines()
-
-		message(msg)
+		cat(msg, '\n')
 	}
 
 	self
 
 })()
+
+
+
+
+
 
 # showSummary
 #
