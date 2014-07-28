@@ -92,14 +92,12 @@ report <- ( function () {
 		combine_stats <- stats := {
 			summary <- x_(stats) $ x_Fold((acc :current) := {
 
-				acc $ median <- current $ median * current $ obs
-				acc $ obs    <- current $ obs
-
+				acc $ median <- acc $ median + current $ median
 				acc
 
 			}, list(sd = 0, median = 0, obs = 0))
 
-			summary $ median <- summary $ median / summary $ obs
+			summary $ median <- summary $ median / xLenOf(stats)
 			summary
 		}
 
@@ -117,12 +115,12 @@ report <- ( function () {
 				padded_name <- pad( depth, paste0(sep, xFirstOf(li)) )
 
 				parent      <- c(parent, name)
-				match       <- x_(fileStats) $
+				parentStats <- x_(fileStats) $
 					x_Select(
 						xAtKey('filename') %then% xIs(parent))
 
-				line <- if (xNotEmpty(match)) {
-					format_row(padded_name, xFirstOf(match), 'blue')
+				line <- if (xNotEmpty(parentStats)) {
+					format_row(padded_name, xFirstOf(parentStats), 'blue')
 				} else {
 
 					children <-
@@ -134,6 +132,7 @@ report <- ( function () {
 							xIs(parent))
 
 					format_row(padded_name, combine_stats(children), 'green')
+
 				}
 
 				contents <- x_(li) $ xSecondOf() $ x_Map(elem := {
