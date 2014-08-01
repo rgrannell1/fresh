@@ -12,13 +12,17 @@ large code-bases is difficult, so fresh is another tool to determine what needs 
 
 It can also indicate if a project is stagnant or rapidly evolving.
 
-Fresh is VERY slow for large repositories, as git must fetch modification dates
+Fresh is slow, VERY slow for large repositories, as git must fetch modification dates
 for each line in every file in a project.
+
+Fresh can filter for lines or files modified in a range of dates, and has human-readable and
+machine-consumable format.
 
 ### Usage
 
 ```bash
-fresh git::rgrannell1/kiwi
+fresh /home/ryan/Code/kiwi.R in range 0 0.45
+fresh git::rgrannell1/is
 ```
 
 ### Requirements
@@ -47,6 +51,12 @@ devtools :: install_github("rgrannell1/kiwi", ref = 'v0.37.0')
 devtools :: install_github("ropensci/git2r")
 devtools :: install_github("edwindj/docopt.R")
 ```
+
+### Limitations
+
+* Currently slower than it needs to be, due to a poor algorithm for summarising data.
+* Currently fails if it encounters a file-type that isn't human-writeable (mp3 for example).
+* Currently no input validation.
 
 ### License
 

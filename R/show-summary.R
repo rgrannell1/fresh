@@ -103,15 +103,10 @@ report <- ( function () {
 		}
 
 		combine_stats <- stats := {
-
-			stat <- list()
-			stat $ median <-
-				x_(stats) $ xMap(x. $ median) $ x_Reduce(`+`) / xLenOf(stats)
-
-			stat $ sd <-
-				x_(stats) $ xMap(x. $ sd)     $ x_Reduce(`+`) / xLenOf(stats)
-
-			stat
+			list(
+				median = xMeanOf(xMap(x. $ median)),
+				sd     = xMeanOf(xMap(x. $ sd))
+			)
 		}
 
 		add_tabs <- (li : parent : depth) := {
